@@ -3,12 +3,19 @@
         <TicketSection 
         class="ticketSection"
         :data="ticketData"
-        :total="totalPrice"></TicketSection>
+        :total="totalPrice"
+        :serial="serialUnico"
+        :ticket="ticketNum"
+        @delete-all="deleteAll"></TicketSection>
         <SelectionSection 
         :animales="animales"
+        :montoInput="montoInput"
+        @change-monto="changeMonto"
+        @add-animal="addAnimal"
         class="ticketSelection"></SelectionSection>
         <SorteosSection 
         :opciones="sorteos"
+        @select-sorteo="selectSorteo"
         class="sorteosSection"></SorteosSection>
     </div>
 </template>
@@ -16,7 +23,7 @@
 <script>
 import TicketSection from '../components/TicketSection.vue';
 import SelectionSection from '../components/SelectionSection.vue';
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import SorteosSection from '../components/SorteosSection.vue';
 
 export default {
@@ -30,39 +37,10 @@ export default {
         const ticketData = ref([])
         const animales = ref([])
         const sorteos = ref([])
-
-        ticketData.value = [
-            {
-                loteria: 'anigranja',
-                animalito: 'Tigre',
-                monto: 30.43
-            },
-            {
-                loteria: 'anigranja2',
-                animalito: 'Conejo',
-                monto: 20.43
-            },
-            {
-                loteria: 'anigranja2',
-                animalito: 'Conejo',
-                monto: 20.43
-            },
-            {
-                loteria: 'anigranja2',
-                animalito: 'Conejo',
-                monto: 20.43
-            },
-            {
-                loteria: 'anigranja2',
-                animalito: 'Conejo',
-                monto: 20.43
-            },
-            {
-                loteria: 'anigranja2',
-                animalito: 'Conejo',
-                monto: 20.43
-            }
-        ]
+        const sorteosSelected = ref([])
+        const montoInput = ref('0.00')
+        const serialUnico = ref(0)
+        const ticketNum = ref(0)
 
         animales.value = [{
             nombre: 'Conejo - 1',
@@ -110,11 +88,68 @@ export default {
             return total
         })
 
+        function generarSerialUnico() {
+            let serial = '';
+            for (let i = 0; i < 10; i++) {
+                // Genera un dígito aleatorio entre 0 y 9
+                serial += Math.floor(Math.random() * 10);
+            }
+            return serial;
+        }
+
+        const selectSorteo = (id) => {
+            const index = sorteosSelected.value.indexOf(id); // Buscar el índice del nombre en el array
+            
+            if (index > -1) {
+                // Si el nombre ya está, lo quitamos
+                sorteosSelected.value.splice(index, 1);
+            } else {
+                // Si no está, lo agregamos
+                sorteosSelected.value.push(id);
+            }
+
+            console.log(montoInput.value)
+        }
+
+        const changeMonto = (monto) => {
+            montoInput.value = parseFloat(monto)
+        }
+
+        const addAnimal = (animal) => {
+            if(sorteosSelected.value.length > 0){
+                sorteosSelected.value.forEach(sorteo => {
+                    const dato = {
+                        loteria: sorteo,
+                        animalito: animal,
+                        monto: montoInput.value
+                    }
+
+                    ticketData.value.push(dato)
+                })
+            }
+        }
+
+        const deleteAll = () => {
+            ticketData.value = []
+        }
+
+        onMounted(() => {
+            serialUnico.value = generarSerialUnico()
+            ticketNum.value = generarSerialUnico()
+        })
+
         return{
             ticketData,
             totalPrice,
             animales,
-            sorteos
+            sorteos,
+            selectSorteo,
+            montoInput,
+            changeMonto,
+            addAnimal,
+            deleteAll,
+            serialUnico,
+            ticketNum,
         }
     }
 }

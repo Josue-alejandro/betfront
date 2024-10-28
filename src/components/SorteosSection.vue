@@ -15,7 +15,7 @@
                 <div>
                     <p>
                         <label>
-                            <input type="checkbox" class="filled-in"/>
+                            <input @click="$emit('select-sorteo', opcion.nombre)" type="checkbox" class="filled-in"/>
                             <span>{{ opcion.nombre }}</span>
                         </label>
                     </p>

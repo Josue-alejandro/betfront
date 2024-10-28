@@ -5,20 +5,67 @@
                 <h1>Iniciar Sesion</h1>
             </div>
             <div>
-                <div>
-                    <Input text="Usuario" tipo="text"></Input>                  
+                <div class="row">
+                    <div class="input-field s6">
+                        <input type="text" class="validate" v-model="emailInput">
+                        <label class="active" for="first_name2">email</label>
+                    </div>
                 </div>
-                <div>
-                    <Input text="Contraseña" tipo="password"></Input>                  
+                <div class="row">
+                    <div class="input-field s6">
+                        <input type="password" class="validate" v-model="passwordInput">
+                        <label class="active" for="first_name2">Contraseña</label>
+                    </div>
                 </div>
             </div>
             <div class="sendForm">
                 <span>Ingresar</span>
-                <Send></Send>
+                <Send @click="sendLogin"></Send>
             </div>
         </div>
     </div>
 </template>
+
+<script>
+import { ref } from 'vue';
+import axios from 'axios';
+import { useRouter } from 'vue-router';
+
+
+export default{
+    setup(){
+
+        const emailInput = ref('');
+        const passwordInput = ref('');
+        const router = useRouter()
+
+        /////// Funciones /////////////
+
+        const sendLogin = async () => {
+            const url = 'http://localhost:4000/users/login'
+            axios.post(url, {email: emailInput.value, password: passwordInput.value})
+            .then(response => {
+                console.log('Respuesta:', response.data);
+                if(response.data.message == 1){
+                    router.push('/useradmin')
+                    console.log(router)
+                }else if (response.data.message == 3){
+                    router.push('/dashboard')
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+
+        return {
+            emailInput,
+            passwordInput,
+            sendLogin
+        }
+    }
+}
+</script>
 
 <style scoped>
 .fondo{

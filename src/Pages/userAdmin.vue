@@ -5,7 +5,12 @@
                 <div>
                     <div class="input-field col s6 search">
                         <i class="material-icons prefix">search</i>
-                        <input id="icon_prefix" type="text" class="validate">
+                        <input 
+                        id="icon_prefix" 
+                        type="text" 
+                        v-model="search" 
+                        class="validate"
+                        @input="typeSearch">
                         <label for="icon_prefix">Buscar...</label>
                     </div>
                 </div>
@@ -16,30 +21,54 @@
                     </div>
                 </div>
                 <ul>
-                    <li class="card item" v-for="user in usersList" :key="user.index">
-                        <p>
-                            <label>
-                                <input type="checkbox" class="filled-in" checked="checked" />
-                                <span></span>
-                            </label>
-                        </p>
-                        <span>{{ user.nombre }} - {{ user.rol }}</span>
+                    <li 
+                    class="card item" 
+                    :style="{backgroundColor: userSelected === user.id ? '#613DC1' : 'white', color: userSelected === user.id ? 'white' : 'black'}" 
+                    v-for="user in showList" 
+                    :key="user.index"
+                    @click="selectThisUser(user.id, user)">
+                        <span>{{ user.name }} - {{ role(user.role_id) }}</span>
                     </li>
                 </ul>
             </div>
         </div>
         <div class="opciones">
             <div class="card opcionesCard">
-                <a class="waves-effect waves-light btn #9575cd deep-purple lighten-2"><i class="material-icons left">add</i>Nuevo</a>
-                <a class="waves-effect waves-light btn #e53935 red darken-1"><i class="material-icons left">delete</i>Eliminar</a>
-                <a class="waves-effect waves-light btn #f9a825 yellow darken-3"><i class="material-icons left">edit</i>Modificar</a>
+                <button 
+                ref="addButton"
+                class="waves-effect waves-light btn #9575cd deep-purple lighten-2"><i class="material-icons left">add</i>Nuevo</button>
+                <button 
+                ref="delButton"
+                disabled
+                @click="deleteUser"
+                class="waves-effect waves-light btn #e53935 red darken-1"><i class="material-icons left">delete</i>Eliminar</button>
+                <button 
+                ref="editButton"
+                disabled
+                @click="editUser"
+                class="waves-effect waves-light btn #f9a825 yellow darken-3"><i class="material-icons left">edit</i>Modificar</button>
             </div>
-            <div class="card userCard">
+            <div class="card userCard" v-if="userSelectedData.length !== 0">
                 <div class="user">
                     <i class="material-icons profilePic">account_circle</i>
                     <div class="userData">
-                        <span class="userName">Deku</span>
-                        <span class="userSubt">Tecnico</span>
+                        <span class="userName">{{ userSelectedData.name }}</span>
+                        <span class="userSubt">{{ role(userSelectedData.role_id) }}</span>
+                    </div>
+                </div>
+                <div class="userInfo">
+                    <div class="datos">
+                        <div class="dato">
+                            <i class="material-icons">email</i>
+                            <span><b>Correo:</b> {{ userSelectedData.email }}</span>
+                        </div>
+                        <div class="dato">
+                            <i class="material-icons">call</i>
+                            <span><b>Telefono:</b> {{ userSelectedData.phone_number }}</span>
+                        </div>
+                    </div>
+                    <div class="totalCorner" v-if="userSelectedData.role_id === 3">
+                        <LineChart class="Chart":chartData="testData" />
                     </div>
                 </div>
             </div>
@@ -48,12 +77,46 @@
 </template>
 
 <script>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
+import axios from 'axios';
+import { LineChart } from 'vue-chart-3';
+import { Chart, Legend, registerables } from 'chart.js';
+import plugin from 'primevue/config';
+
+Chart.register(...registerables);
+
+const URL = 'http://localhost:4000'
 
 export default{
+    components:{
+        LineChart
+    },
     setup(){
 
+        const testData = {
+            labels: ['Semana 1', 'Semana 2', 'Semana 3', 'Semana 4',],
+            options: {
+                legend:{
+                    display: false
+                }
+            },
+            datasets: [
+                {
+                    data: [300, 420, 260, 170],
+                    backgroundColor: ['#613DC1'],
+                },
+            ],
+            
+        };
+
         const usersList = ref([]);
+        const showList = ref([])
+        const search = ref('')
+        const userSelected = ref();
+        const addButton = ref(null);
+        const delButton = ref(null);
+        const editButton = ref(null)
+        const userSelectedData = ref([]);
         const tags = ref([
             {
                 nombre:'Tecnico',
@@ -68,20 +131,92 @@ export default{
                 icon: 'account_box'
             }])
 
-        usersList.value = [
-            {
-                nombre: 'Deku',
-                rol: 'Tecnico',
-            },
-            {
-                nombre: 'Tevallier',
-                rol: 'Tecnico',
+        const role = (val) => {
+            switch (val) {
+                case 1:
+                    return 'Tecnico'
+                    break;
+                case 2:
+                    return 'Banquero'
+                    break;
+                case 3:
+                    return 'Banca'
+                    break;
+                }
+        }
+
+        /////// Funciones //////////////////////
+
+        const getData = async () => {
+            const response = await axios.get(`${URL}/users`);
+            const usersData = response.data
+            
+            usersList.value = usersData
+            showList.value = usersList.value
+            search.value = ""
+        }
+
+        const typeSearch = (array) => {
+            // Convertir el texto de búsqueda a minúsculas para una búsqueda no sensible a mayúsculas
+            const comparacion = search.value.toLowerCase();
+            
+            const result = usersList.value.filter(item => {
+                // Suponiendo que los objetos tienen una propiedad 'nombre' que queremos buscar
+                return item.name.toLowerCase().includes(comparacion);
+            });
+
+            showList.value = result
+        }
+
+        const selectThisUser = (user, data) => {
+            if (user == userSelected.value){
+                userSelected.value = null
+                delButton.value.disabled = true
+                editButton.value.disabled = true
+            }else{
+                userSelected.value = user
+                userSelectedData.value = data
+                delButton.value.disabled = false
+                editButton.value.disabled = false
             }
-        ]
+        }
+
+        const deleteUser = async (id) => {
+            const url = `${URL}/users/delete`
+            
+            const response = await axios.delete(url, {
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                data: { id: userSelected.value }, // El objeto JSON que se enviará en el cuerpo de la solicitud
+            })
+
+            console.log(response)
+        }
+
+        const editUser = async (id) => {
+            alert('hola')
+        }
+
+        onMounted( async () => {
+            await getData()
+        })
 
         return{
-            usersList,
-            tags
+            showList,
+            tags,
+            role,
+            search,
+            typeSearch,
+            selectThisUser,
+            userSelected,
+            userSelectedData,
+            addButton,
+            delButton,
+            editButton,
+            editUser,
+            deleteUser,
+            testData
         }
     }
 }
@@ -102,6 +237,11 @@ export default{
     width: 400px;
 }
 
+.totalCorner{
+    margin: 20px;
+    height: 230px;
+}
+
 .opciones{
     width: 600px;
 }
@@ -112,7 +252,7 @@ export default{
     flex-direction: row;
 }
 
-.opcionesCard a{
+.opcionesCard button{
     margin-right: 10px;
 }
 
@@ -122,10 +262,18 @@ export default{
     display: flex;
     flex-direction: row;
     align-items: center;
+    cursor: pointer;
+    padding-top: 1.5em;
+    padding-bottom: 1.5em;
 }
 
 li {
     list-style: none;
+}
+
+ul{
+    height: 60vh;
+    overflow-y: scroll;
 }
 
 .search{
@@ -181,5 +329,20 @@ li {
 
 .userSubt{
     color: rgb(95, 95, 95);
+}
+
+.dato{
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    margin: 25px;
+}
+
+.dato i {
+    margin-right: 10px;
+}
+
+.Chart{
+    height: 200px;
 }
 </style>
